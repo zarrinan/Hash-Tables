@@ -19,7 +19,6 @@ class HashTable:
         self.capacity = capacity  # Number of buckets in the hash table
         self.storage = [None] * capacity
 
-
     def _hash(self, key):
         '''
         Hash an arbitrary key and return an integer.
@@ -36,33 +35,46 @@ class HashTable:
         for c in key:
             hashvalue = (hashvalue * 33) + ord(c)
         return hashvalue
-        
+
     def _hash_mod(self, key):
         '''
         Take an arbitrary key and return a valid integer index
         within the storage capacity of the hash table.
         '''
-        return self._hash(key) % self.capacity
+        return self._hash_djb2(key) % self.capacity
 
     def insert(self, key, value):
         '''
         Store the value with the given key.
-        # Part 1: Hash collisions should be handled with an error warning. (Think about and
-        # investigate the impact this will have on the tests)
-        # Part 2: Change this so that hash collisions are handled with Linked List Chaining.
+        Hash collisions should be handled with Linked List Chaining.
         '''
         index = self._hash_mod(key)
+        first_linked_pair = LinkedPair(key, value)
         if self.storage[index]:
-            raise RuntimeError('here is collision')
-        self.storage[index] = LinkedPair(key, value)
-        
+            first_linked_pair.next = self.storage[index]
+        self.storage[index] = first_linked_pair
+
     def remove(self, key):
         '''
         Remove the value stored with the given key.
         Print a warning if the key is not found.
         '''
         index = self._hash_mod(key)
-        self.storage[index] = None
+        found = False
+
+        if self.storage[index]:
+            pair = self.storage[index]
+
+            if pair.key == key:
+                self.storage[index] = pair.next
+            else:
+                while pair.next and not found:
+                    if pair.next.key == key:
+                        pair.next = pair.next.next
+                        found = True
+                    pair = pair.next
+        if not found:
+            print(f'Key: {key} wasn\'t found')
 
     def retrieve(self, key):
         '''
@@ -70,23 +82,31 @@ class HashTable:
         Returns None if the key is not found.
         '''
         index = self._hash_mod(key)
-        if self.storage[index] is None:
-            return None
-        return self.storage[index].value
+        value = None
+        if self.storage[index]:
+            pair = self.storage[index]
+
+            while not value:
+                if pair.key == key:
+                    value = pair.value
+                else:
+                    pair = pair.next
+        return value
 
     def resize(self):
         '''
         Doubles the capacity of the hash table and
         rehash all key/value pairs.
         '''
-        old_storage = self.storage
         self.capacity *= 2
+        old_storage = self.storage
         self.storage = [None] * self.capacity
+
         for pair in old_storage:
-            if pair is not None:
+            while pair:
                 self.insert(pair.key, pair.value)
-
-
+                pair = pair.next
+        
 if __name__ == "__main__":
     ht = HashTable(2)
 
